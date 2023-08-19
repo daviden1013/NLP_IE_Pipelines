@@ -1,0 +1,63 @@
+---
+  run_name: NER_PubMedBERT
+  ##############################
+  # IE loading parameters
+  ##############################
+  # directory for IE files
+  IE_dir: E:\David projects\NLP_IE_Pipelines\IE
+  ##############################
+  # Model fine-tune parameters
+  ##############################
+  # mode, either IO or BIO
+  BIO_mode: BIO
+  # development set file path
+  deve_id_file: E:\David projects\NLP_IE_Pipelines\doc_id\train_id
+  # ratio of validation set. Will be sampled from development set
+  valid_ratio: 0.2
+  # Define entity labels and category numbers
+  label_map: 
+    O: 0
+    B-Drug: 1
+    I-Drug: 2
+    B-Strength: 3
+    I-Strength: 4
+    B-Dosage: 5
+    I-Dosage: 6
+    B-Duration: 7
+    I-Duration: 8
+    B-Frequency: 9
+    I-Frequency: 10
+    B-Form: 11
+    I-Form: 12
+    B-Route: 13
+    I-Route: 14
+    B-Reason: 15
+    I-Reason: 16
+    B-ADE: 17
+    I-ADE: 18
+  # tokenizer path
+  tokenizer: E:\David projects\NLP_IE_Pipelines\base models\PubMedBERT
+  # number of wordpiece tokens. Padding/ truncation will be applied
+  token_length: 256
+  # base NLP model file path
+  base_model: E:\David projects\NLP_IE_Pipelines\base models\PubMedBERT
+  # learning rate
+  lr: 2.e-6
+  # n_ephoch
+  n_epochs: 30
+  # batch_size
+  batch_size: 32
+  # Output path
+  out_path: E:\David projects\NLP_IE_Pipelines
+  # CUDA device name
+  device: cuda:0
+  ##############################
+  # Model evaluate parameters
+  ##############################
+  # test set file path
+  test_id_file: E:\David projects\NLP_IE_Pipelines\doc_id\test_id
+  # batch size for evaluation
+  eval_batch_size: 128
+  # checkpoint to evaluate, "best" use the best with lowest validation loss
+  checkpoint: best  
+  

@@ -1,0 +1,66 @@
+---
+  run_name: RE_PubMedBERT
+  ########################
+  # Entity-pairs processing parameters
+  ########################
+  # The max token distance between 2 entities to consider relations, this is also the max token length for each input.
+  token_length: 64
+  # directory for IE files
+  IE_dir: E:\David projects\NLP_IE_Pipelines\IE
+  # List of entity combos to consider
+  possible_rel: 
+    - ['Reason', 'Drug']
+    - ['Drug', 'Route']
+    - ['Drug', 'Strength']
+    - ['Drug', 'Frequency']
+    - ['Duration', 'Drug']
+    - ['Drug', 'Form']
+    - ['Drug', 'Dosage']
+    - ['Drug', 'ADE']
+  ########################
+  # Model fine-tune parameters
+  ########################
+  # development set file path
+  deve_id_file: E:\David projects\NLP_IE_Pipelines\doc_id\train_id
+  # ratio of validation set. Will be sampled from development set
+  valid_ratio: 0.2
+  # Directory of text
+  txt_dir: E:\David projects\NLP_IE_Pipelines\data\text
+  # Define relation labels and category numbers
+  label_map: 
+    No_relation : 0
+    Reason-Drug : 1
+    Route-Drug : 2
+    Strength-Drug : 3
+    Frequency-Drug : 4
+    Duration-Drug : 5
+    Form-Drug : 6
+    Dosage-Drug : 7
+    ADE-Drug : 8
+  # tokenizer path
+  tokenizer: E:\David projects\NLP_IE_Pipelines\base models\PubMedBERT
+  # Word tokens to be included in a segment
+  word_token_length: 64
+  # wordpiece tokens to include in a training instance
+  wordpiece_token_length: 128
+  # base NLP model file path
+  base_model: E:\David projects\NLP_IE_Pipelines\base models\PubMedBERT
+  # learning rate
+  lr: 2.e-6
+  # n_ephoch
+  n_epochs: 30
+  # batch_size
+  batch_size: 128
+  # Output path
+  out_path: E:\David projects\NLP_IE_Pipelines
+  # CUDA device name
+  device: cuda:0
+  ########################
+  # Evaluation parameters
+  ########################
+  # batch size for evaluation
+  eval_batch_size: 128
+  # test set file path
+  test_id_file: E:\David projects\NLP_IE_Pipelines\doc_id\test_id
+  # checkpoint to evaluate, "best" use the best with lowest validation loss
+  checkpoint: best  
