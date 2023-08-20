@@ -204,7 +204,7 @@ class Label_studio_IE_converter(IE_converter):
     """
     This method iterate through annotation files and create IEs
     """
-    loop = tqdm(range(self.annotation), total=len(self.annotation), leave=True)
+    loop = tqdm(range(len(self.annotation)), total=len(self.annotation), leave=True)
     for i in loop:
       doc_id = self._parse_doc_id(i)
       txt = self._parse_text(i)

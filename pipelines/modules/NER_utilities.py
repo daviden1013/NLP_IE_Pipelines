@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import abc
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 import pandas as pd
 from modules.Utilities import Information_Extraction_Document, Trainer
 from transformers import AutoTokenizer
@@ -51,17 +51,22 @@ class NER_Dataset(Dataset):
     self.get_segments()
     
   @abc.abstractmethod
-  def _get_segments(self, doc_id:str, text:str) -> List[Dict[str, str]]:
+  def _get_segments(self, doc_id:str, text:str, entities:Optional[List[Dict]]) -> List[Dict[str, str]]:
     """
     This method segments a document text
-    outputs a list of dict {doc_id, segment, start, end}
+    outputs a list of dict {doc_id, segment, start, end, entities}
     """
     return NotImplemented
   
   def get_segments(self):
     loop = tqdm(self.IEs, total=len(self.IEs), leave=True)
-    for ie in loop:
-      self.segments.extend(self._get_segments(ie['doc_id'], ie['text']))
+    if self.has_label:
+      for ie in loop:
+        self.segments.extend(self._get_segments(ie['doc_id'], ie['text'], ie['entity']))
+    else:
+      for ie in loop:
+        self.segments.extend(self._get_segments(ie['doc_id'], ie['text']))
+        
     
   def __len__(self) -> int:
     """
@@ -99,14 +104,10 @@ class NER_Dataset(Dataset):
     tokens['doc_id'] = [seg['doc_id']] * self.token_length
     # Assign entity type label to each token
     if self.has_label:
-      # only consider entities in this segment
-      entity_list = [entity for entity in self.IEs[seg['doc_id']]['entity'] \
-                     if entity['start'] >= seg['start'] and entity['end'] <= seg['end']]
-
       if self.mode == 'BIO':
-        tokens['labels'] = self._get_BIO_entity_type(tokens['spans'], entity_list)
+        tokens['labels'] = self._get_BIO_entity_type(tokens['spans'], seg['entities'])
       elif self.mode == 'IO':
-        tokens['labels'] = self._get_IO_entity_type(tokens['spans'], entity_list)
+        tokens['labels'] = self._get_IO_entity_type(tokens['spans'], seg['entities'])
       
       tokens['labels'] = torch.tensor(tokens['labels'])
       
@@ -224,10 +225,11 @@ class Sentence_NER_Dataset(NER_Dataset):
     
     super().__init__(IEs, tokenizer, token_length, label_map, has_label, mode)
     
-  def _get_segments(self, doc_id:str, text:str) -> List[Dict[str, str]]:
+  def _get_segments(self, doc_id:str, text:str, entities:Optional[List[Dict]]) -> List[Dict[str, str]]:
     doc = self.nlp(text)
     sent_list = [s for s in doc.sents]
     sentences = []
+    
     
     if self.N_sentences == 1:
       for sent in sent_list:
@@ -249,6 +251,11 @@ class Sentence_NER_Dataset(NER_Dataset):
       if len(sent_list) % self.N_sentences != 0:
         sentences.append({'doc_id':doc_id, 'segment': text[start:sent.end_char].replace('\n', ' '), 
                           'start': start, 'end': sent.end_char})  
+    
+    #If gold entities were given, calculate entities in this segment
+    if entities is not None:
+      for s in sentences:
+        s['entities'] = [e for e in entities if self._is_in_entity((e['start'], e['end']), s['start'], s['end'])]
         
     return sentences
 
