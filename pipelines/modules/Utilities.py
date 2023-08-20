@@ -439,8 +439,8 @@ class IE_Evaluator:
     assert set([e['doc_id'] for e in pred_IEs]).issubset(set([e['doc_id'] for e in gold_IEs])), \
     "Gold IEs must inlcude all Predicted IEs"
     
-    self.pred_IEs_dict = {ie['doc_id']:ie for ie in pred_IEs.items()}
-    self.gold_IEs_dict = {ie['doc_id']:ie for ie in gold_IEs.items()}
+    self.pred_IEs_dict = {ie['doc_id']:ie for ie in pred_IEs}
+    self.gold_IEs_dict = {ie['doc_id']:ie for ie in gold_IEs}
     
     # Get all entity types and relation types in Gold standard
     self.entity_types = []
