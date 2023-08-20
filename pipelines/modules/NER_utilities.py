@@ -51,7 +51,7 @@ class NER_Dataset(Dataset):
     self.get_segments()
     
   @abc.abstractmethod
-  def _get_segments(self, doc_id:str, text:str, entities:Optional[List[Dict]]) -> List[Dict[str, str]]:
+  def _get_segments(self, doc_id:str, text:str, entities:Optional[List[Dict]]=None) -> List[Dict[str, str]]:
     """
     This method segments a document text
     outputs a list of dict {doc_id, segment, start, end, entities}
@@ -225,7 +225,7 @@ class Sentence_NER_Dataset(NER_Dataset):
     
     super().__init__(IEs, tokenizer, token_length, label_map, has_label, mode)
     
-  def _get_segments(self, doc_id:str, text:str, entities:Optional[List[Dict]]) -> List[Dict[str, str]]:
+  def _get_segments(self, doc_id:str, text:str, entities:Optional[List[Dict]]=None) -> List[Dict[str, str]]:
     doc = self.nlp(text)
     sent_list = [s for s in doc.sents]
     sentences = []
