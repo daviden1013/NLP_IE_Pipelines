@@ -44,7 +44,7 @@ def binary_search(position:int, spans:Tuple[int, int]) -> int:
 
 class RE_Dataset(Dataset):
   def __init__(self, 
-               IEs: Dict[str, Information_Extraction_Document], 
+               IEs: List[Information_Extraction_Document], 
                tokenizer: AutoTokenizer, 
                possible_rel: List[List[str]],
                token_length: int,
@@ -58,7 +58,7 @@ class RE_Dataset(Dataset):
 
     Parameters
     ----------
-    IEs : Dict[str, Information_Extraction_Document]
+    IEs : List[Information_Extraction_Document]
       Dict of IE.
     tokenizer : AutoTokenizer
       tokenizer.
@@ -108,9 +108,9 @@ class RE_Dataset(Dataset):
     
   
   def _get_spans(self):
-    loop = tqdm(self.IEs.items(), total=len(self.IEs), leave=True)
+    loop = tqdm(self.IEs, total=len(self.IEs), leave=True)
     loop.set_description('Calculate token spans')
-    for _, ie in loop:
+    for ie in loop:
       self.token_spans[ie['doc_id']] = None
       self.entity_spans[ie['doc_id']] = {}
       tokens = self.tokenizer(ie['text'], add_special_tokens=True, return_offsets_mapping=True) 
@@ -119,11 +119,10 @@ class RE_Dataset(Dataset):
         self.entity_spans[ie['doc_id']][e['entity_id']] = binary_search(e['start'], tokens.offset_mapping)
       
       
-  
   def get_segments(self):
-    loop = tqdm(self.IEs.items(), total=len(self.IEs.items()), leave=True)
+    loop = tqdm(self.IEs, total=len(self.IEs), leave=True)
     loop.set_description('Prepare segments')
-    for _, ie in loop:
+    for ie in loop:
       self.segments.extend(self._get_segments(ie))
   
   
@@ -185,9 +184,10 @@ class RE_Dataset(Dataset):
     
     return tokens
 
+
 class InlineTag_RE_Dataset(RE_Dataset):
   def __init__(self, 
-               IEs: Dict[str, Information_Extraction_Document], 
+               IEs: List[Information_Extraction_Document], 
                tokenizer: AutoTokenizer, 
                possible_rel: List[List[str]],
                token_length: int,
@@ -332,7 +332,7 @@ class RE_Predictor:
                device:str=None):
     """
     This class inputs a fine-tuned model and a dataset. 
-    outputs a dict of IEs {doc_id, IE} with relations and probability
+    outputs a list of IEs with entities (same as input), relations and probability
     {relation_id, relation_type, relation_prob, entity_1_id, entity_2_id, entity_1_text, entity_2_text}
 
     Parameters
@@ -397,7 +397,7 @@ class RE_Predictor:
     ies = {ie['doc_id']: Information_Extraction_Document(doc_id=ie['doc_id'], 
                                                          text=ie['text'], 
                                                          entity_list=ie['entity']) 
-           for _, ie in self.dataset.IEs.items()}
+           for ie in self.dataset.IEs}
     
     for r in pairs.itertuples():
       relation_id = f'{r.doc_id}_{r.entity_1_id}_{r.entity_2_id}'
@@ -411,5 +411,5 @@ class RE_Predictor:
                                      'entity_2_id':r.entity_2_id,
                                      'entity_1_text':entity_1_text,
                                      'entity_2_text':entity_2_text})
-    return ies
+    return list(ies.values())
   

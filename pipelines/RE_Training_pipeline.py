@@ -40,15 +40,15 @@ def main():
   valid_ids = np.random.choice(dev_id, int(len(dev_id) * config['valid_ratio']), replace=False).tolist()
   train_ids = [i for i in dev_id if i not in valid_ids]
   """ Load IEs for dataset """
-  train_IEs = {}
+  train_IEs = []
   for train_id in train_ids:
-    train_IEs[train_id] = Information_Extraction_Document(doc_id=train_id, 
-                                                          filename=os.path.join(config['IE_dir'], f'{train_id}.ie'))
+    train_IEs.append(Information_Extraction_Document(doc_id=train_id, 
+                                                     filename=os.path.join(config['IE_dir'], f'{train_id}.ie')))
       
-  valid_IEs = {}
+  valid_IEs = []
   for valid_id in valid_ids:
-    valid_IEs[valid_id] = Information_Extraction_Document(doc_id=valid_id, 
-                                                          filename=os.path.join(config['IE_dir'], f'{valid_id}.ie'))
+    valid_IEs.append(Information_Extraction_Document(doc_id=valid_id, 
+                                                     filename=os.path.join(config['IE_dir'], f'{valid_id}.ie')))
   
   train_dataset = InlineTag_RE_Dataset(IEs=train_IEs, 
                                        tokenizer=tokenizer, 

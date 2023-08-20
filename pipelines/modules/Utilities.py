@@ -20,7 +20,7 @@ class Information_Extraction_Document:
                entity_list:List[Dict[str, str]]=None,
                relation_list:List[Dict[str, str]]=None):
     """
-    Information Extraction Document (IED) is a general object for NER and RE
+    Information Extraction Document (IE) is a general object for NER and RE
     
     Parameters
     ----------
@@ -130,15 +130,15 @@ class IE_converter:
   def _parse_relation(self) -> List[Dict[str, str]]:
     """
     This method inputs annotation filename with dir
-    outputs list of dict {relation_id, entity_1_id, entity_1_text, 
-                          entity_2_id, entity_2_text, relation_type}
+    outputs list of dict {relation_id, relation_type, entity_1_id, entity_1_text, 
+                          entity_2_id, entity_2_text}
     """
     return NotImplemented
   
   @abc.abstractmethod
   def pop_IE(self):
     """
-    THis method populates input annotation files and save as [doc_id].ie files. 
+    This method populates input annotation files and save as [doc_id].ie files. 
     """
     return NotImplemented
 
@@ -422,24 +422,30 @@ class Trainer():
             
 
 class IE_Evaluator:
-  def __init__(self, pred_IEs:Dict[str, Information_Extraction_Document], 
-               gold_IEs:Dict[str, Information_Extraction_Document]):
+  def __init__(self, pred_IEs:List[Information_Extraction_Document], 
+               gold_IEs:List[Information_Extraction_Document]):
     """
     This class evaluates a Dict of IE on NER and RE
     Outputs a 
 
     Parameters
     ----------
-    pred_IEs : Dict[str, Information_Extraction_Document]
-      DESCRIPTION.
-    gold_IEs : Dict[str, Information_Extraction_Document]
-      DESCRIPTION.
+    pred_IEs : List[Information_Extraction_Document]
+      a list of predicted IEs.
+    gold_IEs : List[Information_Extraction_Document]
+      a list of gold IEs that includes the predicted IE documents. 
+      Can be more than predicted documents. 
     """
-    self.pred_IEs = pred_IEs
-    self.gold_IEs = gold_IEs
+    assert set([e['doc_id'] for e in pred_IEs]).issubset(set([e['doc_id'] for e in gold_IEs])), \
+    "Gold IEs must inlcude all Predicted IEs"
+    
+    self.pred_IEs_dict = {ie['doc_id']:ie for ie in pred_IEs.items()}
+    self.gold_IEs_dict = {ie['doc_id']:ie for ie in gold_IEs.items()}
+    
+    # Get all entity types and relation types in Gold standard
     self.entity_types = []
     self.relation_types = []
-    for _, ie in gold_IEs.items():
+    for ie in gold_IEs:
       if ie.has_entity():
         for e in ie['entity']:
           if e['entity_type'] not in self.entity_types:
@@ -549,9 +555,9 @@ class IE_Evaluator:
     a Dict of {doc_id, dataframe} for each document
     """
     doc_res = {}
-    for _, ie in self.pred_IEs.items():
+    for _, ie in self.pred_IEs_dict.items():
       pred_entities = ie['entity']
-      gold_entities = self.gold_IEs[ie['doc_id']]['entity']
+      gold_entities = self.gold_IEs_dict[ie['doc_id']]['entity']
       res = self.NER_evaluate(pred_entities=pred_entities, gold_entities=gold_entities)
 
       table = pd.DataFrame(res).transpose().reset_index().rename(columns={'index':'entity_type'})
@@ -570,30 +576,6 @@ class IE_Evaluator:
     total_res['partial_F1'] = total_res.apply(lambda x:self.F1(x.partial_precision, x.partial_recall), axis=1)
     
     return total_res, doc_res
-
-  
-  def _get_relation_df(self, pred_relations:List[Dict], 
-                       gold_relations:List[Dict]) -> pd.DataFrame:
-    """
-    This method inputs a list of predicted relations 
-    {relation_id, relation_type, relation_prob, entity_1_id, entity_2_id,
-     entity_1_text, entity_2_text}
-    and a list of gold relations. 
-    Outputs a dataframe with columns {entity_1_2_id, pred_relation_type, pred_relation_prob,
-                                      gold_relation_type}
-    """
-    pred_df = pd.DataFrame(pred_relations)
-    pred_df['entity_1_2_id'] = [tuple(sorted([i, j])) for i, j in zip(pred_df['entity_1_id'], pred_df['entity_2_id'])]
-    pred_df = pred_df[['entity_1_2_id', 'relation_type', 'relation_prob']]
-    pred_df.rename(columns={'relation_type':'pred_relation_type', 
-                            'relation_prob':'pred_relation_prob'}, inplace=True)
-    
-    gold_df = pd.DataFrame(gold_relations)
-    gold_df['entity_1_2_id'] = [tuple(sorted([i, j])) for i, j in zip(gold_df['entity_1_id'], gold_df['entity_2_id'])]
-    gold_df = gold_df[['entity_1_2_id', 'relation_type']]
-    gold_df.rename(columns={'relation_type':'gold_relation_type'}, inplace=True)
-    
-    return pd.merge(pred_df, gold_df, on='entity_1_2_id')
   
 
   def RE_evaluate(self, pred_relations:List[Dict], 
@@ -654,9 +636,9 @@ class IE_Evaluator:
     a Dict of {doc_id, dataframe} for each document
     """
     doc_res = {}
-    for _, ie in self.pred_IEs.items():
+    for _, ie in self.pred_IEs_dict.items():
       pred_relations = ie['relation']
-      gold_relations = self.gold_IEs[ie['doc_id']]['relation']
+      gold_relations = self.gold_IEs_dict[ie['doc_id']]['relation']
       res = self.RE_evaluate(pred_relations=pred_relations, gold_relations=gold_relations)
 
       table = pd.DataFrame(res).transpose().reset_index().rename(columns={'index':'relation_type'})

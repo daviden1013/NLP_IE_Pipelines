@@ -14,7 +14,7 @@ import re
 
 class NER_Dataset(Dataset):
   def __init__(self, 
-               IEs: Dict[str, Information_Extraction_Document], 
+               IEs: List[Information_Extraction_Document], 
                tokenizer: AutoTokenizer, 
                token_length: int,
                label_map: Dict,
@@ -27,7 +27,7 @@ class NER_Dataset(Dataset):
 
     Parameters
     ----------
-    IEs : Dict[str, Information_Extraction_Document]
+    IEs : List[Information_Extraction_Document]
       Dict of IEs with document_id as key, IE as value
     tokenizer : AutoTokenizer
       PretrainedTokenizerFast for the model
@@ -59,8 +59,8 @@ class NER_Dataset(Dataset):
     return NotImplemented
   
   def get_segments(self):
-    loop = tqdm(self.IEs.items(), total=len(self.IEs.items()), leave=True)
-    for _, ie in loop:
+    loop = tqdm(self.IEs, total=len(self.IEs), leave=True)
+    for ie in loop:
       self.segments.extend(self._get_segments(ie['doc_id'], ie['text']))
     
   def __len__(self) -> int:
@@ -185,7 +185,7 @@ class NER_Dataset(Dataset):
 
 class Sentence_NER_Dataset(NER_Dataset):
   def __init__(self, 
-               IEs: Dict[str, Information_Extraction_Document], 
+               IEs: List[Information_Extraction_Document], 
                tokenizer: AutoTokenizer, 
                token_length: int,
                label_map: Dict,
@@ -197,7 +197,7 @@ class Sentence_NER_Dataset(NER_Dataset):
 
     Parameters
     ----------
-    IEs : Dict[str, Information_Extraction_Document]
+    IEs : List[Information_Extraction_Document]
       Dict of IEs with document_id as key, IE as value
     tokenizer : AutoTokenizer
       PretrainedTokenizerFast for the model
@@ -346,7 +346,7 @@ class NER_Predictor:
                device:str=None):
     """
     This class takes a model and an unlabeled dataset 
-    outputs a dict of IEs {doc_id, IE} with entities
+    outputs a list of IEs with entities
 
     Parameters
     ----------
@@ -380,7 +380,7 @@ class NER_Predictor:
 
   def predict(self) -> Dict[str, Information_Extraction_Document]:
     """
-    This method outputs a dict of IEs {doc_id, IE} with entities
+    This method outputs a list of IE with entities
     """
     token_pred = {'doc_id':[],
                   'input_id':[],
@@ -442,9 +442,9 @@ class NER_Predictor:
     return entity.reindex(['doc_id', 'start', 'end', 'entity_type', 'prob', 'conf'], axis=1)
     
   
-  def _entities_to_IEs(self, entities: pd.DataFrame) -> Dict[str, Information_Extraction_Document]:
-    ies = {doc_id: Information_Extraction_Document(doc_id=doc_id, text=ie['text']) 
-           for doc_id, ie in self.dataset.IEs.items()}
+  def _entities_to_IEs(self, entities: pd.DataFrame) -> List[Information_Extraction_Document]:
+    ies = {ie['doc_id']: Information_Extraction_Document(doc_id=ie['doc_id'], text=ie['text']) 
+           for ie in self.dataset.IEs}
     for r in entities.itertuples():
       entity_id = f'{r.doc_id}_{r.start}_{r.end}'
       entity_text = ies[r.doc_id]['text'][r.start:r.end].replace('\n', ' ')
@@ -453,6 +453,6 @@ class NER_Predictor:
                                    'entity_type':r.entity_type,
                                    'start':r.start,
                                    'end':r.end})
-    
-    return ies
+      
+    return list(ies.values())
   

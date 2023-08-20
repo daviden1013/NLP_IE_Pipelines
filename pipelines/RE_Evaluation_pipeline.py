@@ -36,10 +36,10 @@ def main():
     lines = f.readlines()
   test_ids = [line.strip() for line in lines]
 
-  test_IEs = {}
+  test_IEs = []
   for test_id in test_ids:
-    test_IEs[test_id] = Information_Extraction_Document(doc_id=test_id, 
-                                                        filename=os.path.join(config['IE_dir'], f'{test_id}.ie'))
+    test_IEs.append(Information_Extraction_Document(doc_id=test_id, 
+                                                    filename=os.path.join(config['IE_dir'], f'{test_id}.ie')))
       
   test_dataset = InlineTag_RE_Dataset(IEs=test_IEs, 
                                       tokenizer=tokenizer, 
