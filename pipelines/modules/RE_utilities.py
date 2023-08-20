@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import abc
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 import pandas as pd
 from modules.Utilities import Information_Extraction_Document, Trainer
 from transformers import AutoTokenizer
@@ -102,7 +102,7 @@ class RE_Dataset(Dataset):
     Returns
     -------
     List[Dict[str, str]]
-      a list of segments as Dict {doc_id, segment, entity_1_id, entity_2_id}.
+      a list of segments as Dict {doc_id, segment, entity_1_id, entity_2_id, (relation_type)}.
     """
     return NotImplemented
     
@@ -126,18 +126,16 @@ class RE_Dataset(Dataset):
       self.segments.extend(self._get_segments(ie))
   
   
-  def _get_relation_type(self, ie:Information_Extraction_Document, 
-                         entity_1_id:str, entity_2_id:str) -> str:
+  def _get_relation_type(self, relations:List[Dict], entity_1_id:str, entity_2_id:str) -> str:
     """
     This method gets the relation type between 2 entities
     """
-    for r in ie['relation']:
+    for r in relations:
       if sorted([entity_1_id, entity_2_id]) == sorted([r['entity_1_id'], r['entity_2_id']]):
         return r['relation_type']
     
     return 'No_relation'
     
-  
   
   def _check_N_tokens_between(self, doc_id, entity_1_id, entity_2_id) -> bool:
     """
@@ -178,9 +176,7 @@ class RE_Dataset(Dataset):
     tokens['entity_2_id'] = seg['entity_2_id']
     
     if self.has_label:
-      ie = self.IEs[seg['doc_id']]
-      label = self._get_relation_type(ie, seg['entity_1_id'], seg['entity_2_id'])
-      tokens['label'] = torch.tensor(self.label_map[label])
+      tokens['label'] = torch.tensor(self.label_map[seg['relation_type']])
     
     return tokens
 
@@ -211,8 +207,6 @@ class InlineTag_RE_Dataset(RE_Dataset):
   def _get_segments(self, ie:Information_Extraction_Document) -> List[Dict[str, str]]:
     segments = []
     for entity_1, entity_2 in combinations(ie['entity'], 2):
-      
-      
       within_N_tokens = self._check_N_tokens_between(ie['doc_id'], entity_1['entity_id'], entity_2['entity_id'])
       within_possible_rel = self._check_possible_rel(entity_1['entity_type'], entity_2['entity_type'])
       
@@ -233,8 +227,14 @@ class InlineTag_RE_Dataset(RE_Dataset):
                   ie['text'][second_entity['start']:second_entity['end']] + " [\E] " + \
                   ie['text'][second_entity['end']:end_pos]
         
-        segments.append({'doc_id':ie['doc_id'], 'segment':segment, 
-                         'entity_1_id':entity_1['entity_id'], 'entity_2_id':entity_2['entity_id']})
+        if self.has_label:
+          segments.append({'doc_id':ie['doc_id'], 'segment':segment, 
+                           'entity_1_id':entity_1['entity_id'], 'entity_2_id':entity_2['entity_id'],
+                           'relation_type':self._get_relation_type(ie['relation'], 
+                                                                   entity_1['entity_id'], entity_2['entity_id'])})
+        else:
+          segments.append({'doc_id':ie['doc_id'], 'segment':segment, 
+                           'entity_1_id':entity_1['entity_id'], 'entity_2_id':entity_2['entity_id']})
     
     return segments
     
