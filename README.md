@@ -2,6 +2,7 @@
 This is a general Natural Language Processing (NLP) system that comprised of a Named Entity Recognition (NER) module and a Relation Extraction (RE) module. The **Information Extraction Document (IE)** class is the main data structure used through out the training, evaluation, and prediction for both NER and RE. 
 
 **Main frameworks**: PyTorch, Transformers (Hugging Face)
+
 **Supported annotation tools**: Label-studio, BRAT, MAE
 
 ## Development pipeline overview
