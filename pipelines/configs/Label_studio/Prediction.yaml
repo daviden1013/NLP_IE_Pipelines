@@ -1,0 +1,45 @@
+---
+  ########################################################
+  # Text loading (this depends on the raw text format)
+  ########################################################
+  doc_file: /home/tmhexh57/mnt/DataTeam/DVT quality and research/NLP/Interpretation IE/data/LE interpretation 2016-2022.pickle
+  doc_id_var: Order ID
+  text_var: text
+  ##################
+  # NER
+  ##################
+  NER_label_map: 
+    O: 0
+    B-VEIN: 1
+    I-VEIN: 2
+    B-VEIN_PROPERTY: 3
+    I-VEIN_PROPERTY: 4
+    B-CONDITION-ABS: 5
+    I-CONDITION-ABS: 6
+    B-CONDITION-PRES: 7
+    I-CONDITION-PRES: 8
+    B-CONDITION_PROPERTY: 9
+    I-CONDITION_PROPERTY: 10
+  NER_tokenizer: /home/tmhexh57/mnt/DataTeam/DVT quality and research/NLP/Interpretation IE/finetuned models/NER_PubMedBERT
+  NER_token_length: 256
+  BIO_mode: BIO
+  NER_model: /home/tmhexh57/mnt/DataTeam/DVT quality and research/NLP/Interpretation IE/finetuned models/NER_PubMedBERT
+  ##################
+  # RE
+  ##################
+  possible_rel: 
+    - ['VEIN', 'CONDITION-PRES']
+    - ['VEIN', 'VEIN_PROPERTY']
+    - ['CONDITION-PRES', 'CONDITION_PROPERTY']
+  re_label_map: 
+    No_relation: 0
+    CONDITION-VEIN: 1
+    VEIN-PROPERTY: 2
+    CONDITION-PROPERTY: 3
+  RE_tokenizer: /home/tmhexh57/mnt/DataTeam/DVT quality and research/NLP/Interpretation IE/finetuned models/RE_PubMedBERT
+  RE_token_length: 64
+  RE_model: /home/tmhexh57/mnt/DataTeam/DVT quality and research/NLP/Interpretation IE/finetuned models/RE_PubMedBERT
+  
+  batch_size: 128
+  device: cuda:0
+  out_dir: /home/tmhexh57/mnt/DataTeam/DVT quality and research/NLP/Interpretation IE/output

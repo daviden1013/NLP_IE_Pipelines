@@ -1,0 +1,50 @@
+---
+  run_name: RE_PubMedBERT
+  ########################
+  # Entity-pairs processing parameters
+  ########################
+  # The max token distance between 2 entities to consider relations, this is also the max token length for each input.
+  token_length: 64
+  # directory for IE files
+  IE_dir:
+  # List of entity combos to consider
+  possible_rel: 
+    - ['VEIN', 'CONDITION-PRES']
+    - ['VEIN', 'VEIN_PROPERTY']
+    - ['CONDITION-PRES', 'CONDITION_PROPERTY']
+  ########################
+  # Model fine-tune parameters
+  ########################
+  # development set file path
+  deve_id_file: 
+  # ratio of validation set. Will be sampled from development set
+  valid_ratio: 0.2
+  # Define relation labels and category numbers
+  label_map: 
+    No_relation: 0
+    CONDITION-VEIN: 1
+    VEIN-PROPERTY: 2
+    CONDITION-PROPERTY: 3
+  # tokenizer path
+  tokenizer: 
+  # base NLP model file path
+  base_model: 
+  # learning rate
+  lr: 2.e-6
+  # n_ephoch
+  n_epochs: 30
+  # batch_size
+  batch_size: 128
+  # Output path
+  out_path: 
+  # CUDA device name
+  device: cuda:0
+  ########################
+  # Evaluation parameters
+  ########################
+  # batch size for evaluation
+  eval_batch_size: 128
+  # test set file path
+  test_id_file:
+  # checkpoint to evaluate, "best" use the best with lowest validation loss
+  checkpoint: best  

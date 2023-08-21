@@ -1,0 +1,55 @@
+---
+  run_name: NER_PubMedBERT
+  ##############################
+  # IE loading parameters
+  ##############################
+  # directory for IE files
+  IE_dir: 
+  ##############################
+  # Model fine-tune parameters
+  ##############################
+  # mode, either IO or BIO
+  BIO_mode: BIO
+  # development set file path
+  deve_id_file: 
+  # ratio of validation set. Will be sampled from development set
+  valid_ratio: 0.2
+  # Define entity labels and category numbers
+  label_map: 
+    O: 0
+    B-VEIN: 1
+    I-VEIN: 2
+    B-VEIN_PROPERTY: 3
+    I-VEIN_PROPERTY: 4
+    B-CONDITION-ABS: 5
+    I-CONDITION-ABS: 6
+    B-CONDITION-PRES: 7
+    I-CONDITION-PRES: 8
+    B-CONDITION_PROPERTY: 9
+    I-CONDITION_PROPERTY: 10
+  # tokenizer path
+  tokenizer: 
+  # number of wordpiece tokens. Padding/ truncation will be applied
+  token_length: 256
+  # base NLP model file path
+  base_model: 
+  # learning rate
+  lr: 2.e-6
+  # n_ephoch
+  n_epochs: 200
+  # batch_size
+  batch_size: 32
+  # Output path
+  out_path: 
+  # CUDA device name
+  device: cuda:0
+  ##############################
+  # Model evaluate parameters
+  ##############################
+  # test set file path
+  test_id_file: 
+  # batch size for evaluation
+  eval_batch_size: 128
+  # checkpoint to evaluate, "best" use the best with lowest validation loss
+  checkpoint: best  
+  

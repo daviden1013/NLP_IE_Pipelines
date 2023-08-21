@@ -1,0 +1,20 @@
+---
+  ##############################
+  # IE processing parameters
+  ##############################
+  # specify the variable name that we want to use as doc_id
+  doc_id_var: Order ID
+  relation_map:
+    CONDITION-VEIN:
+      - VEIN
+      - CONDITION-PRES
+    VEIN-PROPERTY:
+      - VEIN
+      - VEIN_PROPERTY
+    CONDITION-PROPERTY:
+      - CONDITION-PRES
+      - CONDITION_PROPERTY
+  # directory for annotated files
+  ann_file: 
+  # directory for IE files
+  IE_dir: 
