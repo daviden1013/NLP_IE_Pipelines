@@ -144,19 +144,29 @@ class IE_converter:
 
 
 class Label_studio_IE_converter(IE_converter):
-  def __init__(self, doc_id_var:str, ann_file:str, IE_dir:str):
+  def __init__(self, doc_id_var:str, relation_map:Dict[List[str], str], 
+               ann_file:str, IE_dir:str):
     """
     This class inputs an annotation file, outputs IEs
     Parameters
     ----------
-    txt_dir: str
+    txt_dir : str
       Directory of text files
+    relation_map : Dict[List[str], str]
+      a dictionary of {entity_type, entity_type) : label}. This is because 
+      Label-studio doesn't allow specifing relation type. The label key must 
+      match label_map in RE pipeline config. Mis-matching will not be populated
     ann_dir : str
       Directory of annotation files
     IE_dir : str
       Directory of IE files 
     """
     self.doc_id_var = doc_id_var
+    self.relation_map = {}
+    for k, t in relation_map.items():
+      self.relation_map[(t[0], t[1])] = k
+      self.relation_map[(t[1], t[0])] = k
+    
     self.ann_file = ann_file
     with open(self.ann_file, encoding='utf-8') as f:
       self.annotation = json.loads(f.read())
@@ -192,8 +202,8 @@ class Label_studio_IE_converter(IE_converter):
     ann = self.annotation[idx]
     for r in ann['annotations'][0]['result']:
       if r['type']=='relation':
+        
         rel_list.append({'relation_id':f"{ann['data'][self.doc_id_var]}_{r['from_id']}_{r['to_id']}",
-                         'relation_type':'Related',
                          'entity_1_id':r['from_id'], 
                          'entity_2_id':r['to_id']})
        
@@ -210,11 +220,16 @@ class Label_studio_IE_converter(IE_converter):
       txt = self._parse_text(i)
       entity = self._parse_entity(i)
       entity_text = {e['entity_id']:e['entity_text'] for e in entity}
-      relation = self._parse_relation(i)
-      # fill in entity_1_text, entity_2_text in relations
-      for r in relation:
+      entity_type = {e['entity_id']:e['entity_type'] for e in entity}
+      relation_raw = self._parse_relation(i)
+      # fill in relation_type, entity_1_text, entity_2_text in relations
+      relation = []
+      for r in relation_raw:
         r['entity_1_text'] = entity_text[r['entity_1_id']]
         r['entity_2_text'] = entity_text[r['entity_2_id']]
+        if (entity_type[r['entity_1_id']], entity_type[r['entity_2_id']]) in self.relation_map:
+          r['relation_type'] = self.relation_map[(entity_type[r['entity_1_id']], entity_type[r['entity_2_id']])]
+          relation.append(r)
         
       ie = Information_Extraction_Document(doc_id=doc_id, 
                                            text=txt, 
