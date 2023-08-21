@@ -364,7 +364,7 @@ class RE_Predictor:
     self.dataset = dataset
     self.dataloader = DataLoader(self.dataset, batch_size=self.batch_size, shuffle=False, drop_last=False)
 
-  def predict(self) -> Dict[str, Information_Extraction_Document]:
+  def predict(self) -> List[Information_Extraction_Document]:
     """
     This method outputs a dict of IEs {doc_id, IE} with relations
     """
@@ -382,10 +382,8 @@ class RE_Predictor:
     
     
     pair_df = pd.DataFrame(entity_pair_list, columns=['doc_id', 'entity_1_id', 'entity_2_id'])
-    prob_df = pd.DataFrame(prob_list, columns=[f'{v}_prob' for v in self.label_map.keys()])
-
+    prob_df = pd.DataFrame(prob_list, columns=self.label_map.keys())
     pair_df['pred'] = prob_df.idxmax(axis=1)
-    pair_df['pred'] = pair_df['pred'].str.replace('_prob', '')
     pair_df['prob'] = prob_df.max(axis=1)
     # Remove No_relation entity pairs
     pair_df = pair_df.loc[pair_df['pred'] != 'No_relation'].reset_index(drop=True)
@@ -393,7 +391,7 @@ class RE_Predictor:
     return self._pairs_to_IEs(pair_df)
   
   
-  def _pairs_to_IEs(self, pairs:pd.DataFrame) -> Dict[str, Information_Extraction_Document]:
+  def _pairs_to_IEs(self, pairs:pd.DataFrame) -> List[Information_Extraction_Document]:
     ies = {ie['doc_id']: Information_Extraction_Document(doc_id=ie['doc_id'], 
                                                          text=ie['text'], 
                                                          entity_list=ie['entity']) 

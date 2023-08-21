@@ -385,7 +385,7 @@ class NER_Predictor:
     self.dataset = dataset
     self.dataloader = DataLoader(self.dataset, batch_size=self.batch_size, shuffle=False, drop_last=False)
 
-  def predict(self) -> Dict[str, Information_Extraction_Document]:
+  def predict(self) -> List[Information_Extraction_Document]:
     """
     This method outputs a list of IE with entities
     """
