@@ -25,7 +25,7 @@ class Information_Extraction_Document:
     Parameters
     ----------
     doc_id : str
-      Document ID
+      Document ID. Must be a string.
     filename : str, Optional
       file (.ie) path to load. If provided, the text, entity_list, relation_list
       parameters will not be used. 
@@ -38,6 +38,7 @@ class Information_Extraction_Document:
                        entity_2_text, relation_type}.
     """
     assert filename or text, "A filename or a text must be provided."
+    assert isinstance(doc_id, str), "doc_id must be a string."
     self.doc_id = doc_id
     # if create object from file
     if filename:
