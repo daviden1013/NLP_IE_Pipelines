@@ -345,7 +345,7 @@ class NER_Trainer(Trainer):
           
       # check early stop
       if self.early_stop:
-        if self.loss_no_drop_epochs > self.early_stop_epochs:
+        if self.loss_no_drop_epochs == self.early_stop_epochs - 1:
           break
         
         if valid_mean_loss > self.best_loss:
