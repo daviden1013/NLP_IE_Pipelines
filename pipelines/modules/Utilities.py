@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import abc
+import warnings
 from typing import List, Dict, Tuple, Union
+from itertools import combinations
+import random
 import os
 from tqdm import tqdm
 import yaml
@@ -98,7 +101,7 @@ class Information_Extraction_Document:
 
 
 class IE_converter:
-  def __init__(self, IE_dir:str):
+  def __init__(self, IE_dir:str, overlap_entity_action:str='random', overlap_entity_rank:List[str]=None):
     """
     This class inputs a directory with annotation files, outputs IEs
 
@@ -108,8 +111,22 @@ class IE_converter:
       Directory of annotation files
     IE_dir : str
       Directory of IE files 
+    overlap_entity_action : str
+      Actions to take if overlapped entities were detected. Must be {'random', 'priority', 'keep'}
+      If "random", one of the entities will be randomly dropped.
+      If "priority", the overlap_entity_rank must be provided. 
+      If "keep", both entities will be kept. A warning will be triggered.
     """
     self.IE_dir = IE_dir
+    assert overlap_entity_action in {'random', 'priority', 'keep'}, \
+      "overlap_entity_action must be {'random', 'priority', 'keep'}"
+      
+    if overlap_entity_rank == 'priority':
+      assert isinstance(overlap_entity_rank, list), \
+        'When overlap_entity_rank="priority", the overlap_entity_rank must be provided.'
+    self.overlap_entity_action = overlap_entity_action
+    self.overlap_entity_rank =overlap_entity_rank
+    
 
   @abc.abstractmethod
   def _parse_text(self) -> str:
@@ -126,6 +143,49 @@ class IE_converter:
     outputs list of dict {entity_id, entity_text, entity_type, start, end}
     """
     return NotImplemented
+  
+  
+  def _overlap(self, e1_start, e1_end, e2_start, e2_end) -> bool:
+    return not (e1_end <= e2_start or e1_start >= e2_end)
+  
+  def _check_overlap_entities(self, entities: List[Dict[str, str]]) -> bool:
+    pairs = combinations(entities, 2)
+    for entity1, entity2 in pairs:
+      if self._overlap(entity1['start'], entity1['end'], entity2['start'], entity2['end']):
+          return True
+    return False
+  
+  
+  def _random_sample_overlap_entities(self, entities: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    drop_entity_ids = []
+    pairs = combinations(entities, 2)
+    for entity1, entity2 in pairs:
+      if self._overlap(entity1['start'], entity1['end'], entity2['start'], entity2['end']):
+        # If overlap, randomly choose one to drop
+        if bool(random.getrandbits(1)):
+          drop_entity_ids.append(entity1['entity_id'])
+        else:
+          drop_entity_ids.append(entity2['entity_id'])
+
+    return [e for e in entities if e['entity_id'] not in drop_entity_ids]
+  
+  
+  def _prioritize_overlap_entities(self, entities: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    rank = {e:i for i, e in enumerate(self.overlap_entity_rank)}
+    drop_entity_ids = []
+    pairs = combinations(entities, 2)
+    for entity1, entity2 in pairs:
+      if self._overlap(entity1['start'], entity1['end'], entity2['start'], entity2['end']):
+        # If overlap, choose the higher priority (prior) one
+        entity1_rank = rank[entity1['entity_type']]
+        entity2_rank = rank[entity2['entity_type']]
+        if entity1_rank > entity2_rank:
+          drop_entity_ids.append(entity1['entity_id'])
+        else:
+          drop_entity_ids.append(entity2['entity_id'])
+
+    return [e for e in entities if e['entity_id'] not in drop_entity_ids]
+  
   
   @abc.abstractmethod
   def _parse_relation(self) -> List[Dict[str, str]]:
@@ -146,7 +206,8 @@ class IE_converter:
 
 class Label_studio_IE_converter(IE_converter):
   def __init__(self, doc_id_var:str, relation_map:Dict[List[str], str], 
-               ann_file:str, IE_dir:str):
+               ann_file:str, IE_dir:str, overlap_entity_action:str='random', 
+               overlap_entity_rank:List[str]=None):
     """
     This class inputs an annotation file, outputs IEs
     Parameters
@@ -162,6 +223,7 @@ class Label_studio_IE_converter(IE_converter):
     IE_dir : str
       Directory of IE files 
     """
+    super().__init__(IE_dir, overlap_entity_action, overlap_entity_rank)
     self.doc_id_var = doc_id_var
     self.relation_map = {}
     for k, t in relation_map.items():
@@ -172,7 +234,6 @@ class Label_studio_IE_converter(IE_converter):
     with open(self.ann_file, encoding='utf-8') as f:
       self.annotation = json.loads(f.read())
       
-    self.IE_dir = IE_dir
   
   def _parse_doc_id(self, idx:int) -> str:
     ann = self.annotation[idx]
@@ -222,6 +283,16 @@ class Label_studio_IE_converter(IE_converter):
       entity = self._parse_entity(i)
       entity_text = {e['entity_id']:e['entity_text'] for e in entity}
       entity_type = {e['entity_id']:e['entity_type'] for e in entity}
+      # check if there're overlapped entities
+      if self._check_overlap_entities(entity):
+        warnings.warn(f'Overlapped entity detected! Action: "{self.overlap_entity_action}" will be taken.')
+        if self.overlap_entity_action == 'random':
+          entity = self._random_sample_overlap_entities(entity)
+        if self.overlap_entity_action == 'priority':
+          entity = self._prioritize_overlap_entities(entity)
+        elif self.overlap_entity_action == 'keep':
+          warnings.warn('Overlapped entities were kept. Further processing is suggested.')
+      
       relation_raw = self._parse_relation(i)
       # fill in relation_type, entity_1_text, entity_2_text in relations
       relation = []
@@ -241,7 +312,8 @@ class Label_studio_IE_converter(IE_converter):
 
 
 class BRAT_IE_converter(IE_converter):
-  def __init__(self, txt_dir:str, ann_dir:str, IE_dir:str):
+  def __init__(self, txt_dir:str, ann_dir:str, IE_dir:str, overlap_entity_action:str='random', 
+               overlap_entity_rank:List[str]=None):
     """
     This class inputs a directory with annotation files, outputs IEs
     Parameters
@@ -253,9 +325,10 @@ class BRAT_IE_converter(IE_converter):
     IE_dir : str
       Directory of IE files 
     """
+    super().__init__(IE_dir, overlap_entity_action, overlap_entity_rank)
     self.txt_dir = txt_dir
     self.ann_dir = ann_dir
-    self.IE_dir = IE_dir
+
   
   def _parse_text(self, txt_filename:str):
     with open(os.path.join(self.txt_dir, txt_filename), 'r') as f:
@@ -314,19 +387,33 @@ class BRAT_IE_converter(IE_converter):
     for file in loop:
       txt = self._parse_text(f'{file}.txt')
       entity = self._parse_entity(f'{file}.ann')
+      # check if there're overlapped entities
+      if self._check_overlap_entities(entity):
+        warnings.warn(f'Overlapped entity detected! Action: "{self.overlap_entity_action}" will be taken.')
+        if self.overlap_entity_action == 'random':
+          entity = self._random_sample_overlap_entities(entity)
+        if self.overlap_entity_action == 'priority':
+          entity = self._prioritize_overlap_entities(entity)
+        elif self.overlap_entity_action == 'keep':
+          warnings.warn('Overlapped entities were kept. Further processing is suggested.')
+      # Remove newline in entity text  
       for e in entity:
         e['entity_text'] = txt[e['start']:e['end']].replace('\n', ' ')
-      
+      # Process relations
       entity_text_dict = {e['entity_id']:e['entity_text'] for e in entity}
       relation = self._parse_relation(f'{file}.ann')
+      # check if both entity_1 and entity_2 are in entity list. If not, drop relation. 
+      filter_relation = []
       for r in relation:
-        r['entity_1_text'] = entity_text_dict[r['entity_1_id']]
-        r['entity_2_text'] = entity_text_dict[r['entity_2_id']]
-      
+        if r['entity_1_id'] in entity_text_dict and r['entity_2_id'] in entity_text_dict:          
+          r['entity_1_text'] = entity_text_dict[r['entity_1_id']]
+          r['entity_2_text'] = entity_text_dict[r['entity_2_id']]
+          filter_relation.append(r)
+       
       ie = Information_Extraction_Document(doc_id=file, 
                                            text=txt, 
                                            entity_list=entity, 
-                                           relation_list=relation)
+                                           relation_list=filter_relation)
       ie.save(os.path.join(self.IE_dir, f'{file}.ie'))
 
 
@@ -343,6 +430,8 @@ class Trainer():
                drop_last: bool=True,
                save_model_mode: str="best", 
                save_model_path: str=None, 
+               early_stop: bool=True,
+               early_stop_epochs: int=8,
                log_path: str=None, 
                device:str=None):    
     """
@@ -372,6 +461,11 @@ class Trainer():
       Must be one of {"best", "all"}. The default is best.
     save_model_path : str, optional
       Path for saving checkpoints. The default is None.
+    early_stop : bool, optional
+      Indicator for early stop
+    early_stop_epochs : int, optional
+      if early_stop=True, a continuous n epoches that the validation loss does not 
+      drop will result in early stop.
     log_path : str, optional
       Path for saving logs. The default is None.
     device : str, optional
@@ -395,6 +489,9 @@ class Trainer():
     if save_model_path != None and not os.path.isdir(self.save_model_path):
       os.makedirs(self.save_model_path)
     self.best_loss = float('inf')
+    self.early_stop = early_stop
+    self.loss_no_drop_epochs = 0
+    self.early_stop_epochs = early_stop_epochs
     self.train_dataset = train_dataset
     self.train_loader = DataLoader(train_dataset, batch_size=self.batch_size, 
                                    shuffle=self.shuffle, drop_last=drop_last)

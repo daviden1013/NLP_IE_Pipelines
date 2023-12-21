@@ -333,14 +333,28 @@ class NER_Trainer(Trainer):
         loop.set_description(f'Epoch [{epoch + 1}/{self.n_epochs}]')
         loop.set_postfix(train_loss=train_mean_loss, valid_loss=valid_mean_loss)
         
-      # end of the epoch 
+      """ end of the epoch  """
+      # Save checkpoint
       if self.save_model_mode == 'all':
         self.save_model(epoch, train_mean_loss, valid_mean_loss)
       elif self.save_model_mode == 'best':
         if epoch == 0 or valid_mean_loss < self.best_loss:
           self.save_model(epoch, train_mean_loss, valid_mean_loss)
           
+      # check early stop
+      if self.early_stop:
+        if self.loss_no_drop_epochs > self.early_stop_epochs:
+          break
+        
+        if valid_mean_loss > self.best_loss:
+          self.loss_no_drop_epochs += 1
+        else:
+          self.loss_no_drop_epochs = 0
+        
+      # reset best loss
       self.best_loss = min(self.best_loss, valid_mean_loss)
+      
+      
             
 
 class NER_Predictor:
