@@ -252,6 +252,8 @@ class RE_Trainer(Trainer):
                drop_last: bool=True,
                save_model_mode: str="best", 
                save_model_path: str=None, 
+               early_stop: bool=True,
+               early_stop_epochs: int=8,
                log_path: str=None, 
                device:str=None):    
     """
@@ -259,7 +261,7 @@ class RE_Trainer(Trainer):
     """
     super().__init__(run_name, model, n_epochs, train_dataset, batch_size, optimizer,
                      valid_dataset, shuffle, drop_last, save_model_mode, save_model_path,
-                     log_path, device)
+                     early_stop, early_stop_epochs, log_path, device)
     
     
   def evaluate(self):
