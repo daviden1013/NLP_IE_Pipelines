@@ -81,14 +81,14 @@ class Information_Extraction_Document:
   def has_relation(self) -> bool:
     return bool(self.relation)
   
-  def __repr__(self, N_top_chars:int=100, N_top_items:int=5) -> str:
+  def __repr__(self, N_top_chars:int=100, N_top_items:int=2) -> str:
     text_to_print = self.text[0:N_top_chars]
     entity_to_print = self.entity[0:N_top_items]
     relation_to_print = self.relation[0:N_top_items]
-    return (f'Information_Extraction_Document(doc_id="{self.doc_id}")\n',
+    return ''.join((f'Information_Extraction_Document(doc_id="{self.doc_id}")\n',
             f'text="{text_to_print}", \n',
             f'entity={entity_to_print}, \n',
-            f'relation={relation_to_print})')
+            f'relation={relation_to_print})'))
 
   def save(self, filename:str):
     with open(filename, 'w') as yaml_file:
