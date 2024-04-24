@@ -79,7 +79,7 @@ def main():
   """ Evaluate """
   logging.info('Evaluating...')
   evaluator = IE_Evaluator(pred_IEs, test_IEs)
-  total_eval, doc_eval = evaluator.NER_evaluate_All()
+  total_eval, doc_eval = evaluator.NER_evaluate()
   # Make evaluation output directory
   if not os.path.isdir(os.path.join(config['out_path'], 'evaluation', config['run_name'], 'document')):
       os.makedirs(os.path.join(config['out_path'], 'evaluation', config['run_name'], 'document'))
