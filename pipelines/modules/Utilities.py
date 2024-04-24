@@ -538,8 +538,8 @@ class IE_Evaluator:
   def __init__(self, pred_IEs:List[Information_Extraction_Document], 
                gold_IEs:List[Information_Extraction_Document]):
     """
-    This class evaluates a Dict of IE on NER and RE
-    Outputs a 
+    This class evaluates a List of predicted IE objects against corresponding gold IE objects
+    Outputs ddocument-level and overall level evaluation reports.
 
     Parameters
     ----------
@@ -550,8 +550,7 @@ class IE_Evaluator:
       Can be more than predicted documents. 
     """
     assert set([e['doc_id'] for e in pred_IEs]).issubset(set([e['doc_id'] for e in gold_IEs])), \
-    "Gold IEs must inlcude all Predicted IEs"
-    
+    "Gold IEs must include all Predicted IEs"
     self.pred_IEs_dict = {ie['doc_id']:ie for ie in pred_IEs}
     self.gold_IEs_dict = {ie['doc_id']:ie for ie in gold_IEs}
     
@@ -577,13 +576,11 @@ class IE_Evaluator:
     return 2*p*r/(p+r)
 
     
-  def NER_evaluate(self, pred_entities:List[Dict], 
+  def _NER_evaluate(self, pred_entities:List[Dict], 
                       gold_entities:List[Dict]) -> Dict[str, Dict[str, float]]:
     """
     This method evaluates a single IE document against its gold standard.
-    Outputs a dict {entity_type: {gold, pred, exact, partial_per_gold, partial_per_pred,
-                                  exact_precision, exact_recall, exact_F1,
-                                  partial_precision, partial_recall, partial_F1}}
+    Outputs a dict of metrics.
   
     Parameters
     ----------
@@ -594,33 +591,45 @@ class IE_Evaluator:
   
     Returns
     -------
-    a dict {entity_type: {gold, pred, exact, partial}}
-    gold: number of gold standard entities
-    pred: number of predicted entities
-    exact: number of predicted entities exactly match gold entities
-    partial_per_gold: number of predicted entities partially overlap with gold entities
-                      each gold entity will only be counted once
-    partial_per_pred: number of predicted entities partially overlap with gold entities
-                      each predicted entity will only be counted once
-    exact_precision: precision in exact mode
-    exact_recall: recall in exact mode
-    exact_F1: F1 score in exact mode
-    partial_precision: precision in partial mode
-    partial_recall: recall in partial mode
-    partial_F1: F1 score in partial mode
+    a dict {entity_type: {gold, pred, exact, partial_in_gold, partial_in_pred, exact_precision,
+    exact_recall, exact_F1, partial_precision, partial_recall, partial_F1}}
+    the dict also has {'<Average>': {exact_micro_F1, partial_micro_F1, exact_unweighted_macro_F1, 
+    patial_unweighted_macro_F1, exact_weighted_macro_F1, partial_weighted_macro_F1}}
+
+    metrics for each entity types:
+      gold: number of gold standard entities
+      pred: number of predicted entities
+      exact: number of predicted entities exactly match gold entities
+      partial_in_gold: number of predicted entities partially overlap with gold entities
+                        each gold entity will only be counted once
+      partial_in_pred: number of predicted entities partially overlap with gold entities
+                        each predicted entity will only be counted once
+      exact_precision: precision in exact mode
+      exact_recall: recall in exact mode
+      exact_F1: F1 score in exact mode
+      partial_precision: precision in partial mode
+      partial_recall: recall in partial mode
+      partial_F1: F1 score in partial mode
+    Average F1
+      exact_micro_F1: total (exact) correct entities/ total entities
+      partial_micro_F1: total (partial) correct entities/ total entities
+      exact_unweighted_macro_F1: raw average of f1 scores of all entity types
+      partial_unweighted_macro_F1: raw average of f1 scores of all entity types
+      exact_weighted_macro_F1: weighted average of f1 scores of all entity types
+      partial_weighted_macro_F1: weighted average of f1 scores of all entity types
     """
-    res = {t:{'gold':0, 'pred':0, 'exact':0, 'partial_per_gold':0, 'partial_per_pred':0,
+    entity_type_res = {t:{'gold':0, 'pred':0, 'exact':0, 'partial_in_gold':0, 'partial_in_pred':0,
               'exact_precision':float('nan'), 'exact_recall':float('nan'), 'exact_F1':float('nan'),
               'partial_precision':float('nan'), 'partial_recall':float('nan'), 'partial_F1':float('nan')} 
            for t in self.entity_types}
     
     # Count predicted entities
     for pred_entity in pred_entities:
-      res[pred_entity['entity_type']]['pred'] += 1
+      entity_type_res[pred_entity['entity_type']]['pred'] += 1
       
     # Count gold entities
     for gold_entity in gold_entities:
-      res[gold_entity['entity_type']]['gold'] += 1
+      entity_type_res[gold_entity['entity_type']]['gold'] += 1
     
     # Count matches per pred
     for pred_entity in pred_entities:
@@ -628,10 +637,10 @@ class IE_Evaluator:
         if pred_entity['entity_type'] == gold_entity['entity_type']:
           # exact
           if (pred_entity['start'] == gold_entity['start']) and (pred_entity['end'] == gold_entity['end']):
-            res[gold_entity['entity_type']]['exact'] += 1
+            entity_type_res[gold_entity['entity_type']]['exact'] += 1
           # partial
           if not(pred_entity['end'] < gold_entity['start'] or pred_entity['start'] > gold_entity['end']):
-            res[gold_entity['entity_type']]['partial_per_pred'] += 1
+            entity_type_res[gold_entity['entity_type']]['partial_in_pred'] += 1
             break
       
     # Count matches per gold
@@ -640,21 +649,54 @@ class IE_Evaluator:
         if pred_entity['entity_type'] == gold_entity['entity_type']:
           # partial
           if not(pred_entity['end'] < gold_entity['start'] or pred_entity['start'] > gold_entity['end']):
-            res[gold_entity['entity_type']]['partial_per_gold'] += 1
+            entity_type_res[gold_entity['entity_type']]['partial_in_gold'] += 1
             break
     
-    # Calculate precision, recall, F1    
-    for entity_type, d in res.items():
-      res[entity_type]['exact_precision'] = d['exact']/ d['pred'] if (d['pred'] != 0) else float('nan')
-      res[entity_type]['partial_precision'] = d['partial_per_pred']/ d['pred'] if (d['pred'] != 0) else float('nan')
-      res[entity_type]['exact_recall'] = d['exact']/ d['gold'] if (d['gold'] != 0) else float('nan')
-      res[entity_type]['partial_recall'] = d['partial_per_gold']/ d['gold'] if (d['gold'] != 0) else float('nan')
-      res[entity_type]['exact_F1'] = self.F1(res[entity_type]['exact_precision'], res[entity_type]['exact_recall'])
-      res[entity_type]['partial_F1'] = self.F1(res[entity_type]['partial_precision'], res[entity_type]['partial_recall'])
+    # Calculate per-entity-type precision, recall, F1    
+    for entity_type, d in entity_type_res.items():
+      entity_type_res[entity_type]['exact_precision'] = d['exact']/ d['pred'] if (d['pred'] != 0) else float('nan')
+      entity_type_res[entity_type]['partial_precision'] = d['partial_in_pred']/ d['pred'] if (d['pred'] != 0) else float('nan')
+      entity_type_res[entity_type]['exact_recall'] = d['exact']/ d['gold'] if (d['gold'] != 0) else float('nan')
+      entity_type_res[entity_type]['partial_recall'] = d['partial_in_gold']/ d['gold'] if (d['gold'] != 0) else float('nan')
+      entity_type_res[entity_type]['exact_F1'] = self.F1(entity_type_res[entity_type]['exact_precision'], entity_type_res[entity_type]['exact_recall'])
+      entity_type_res[entity_type]['partial_F1'] = self.F1(entity_type_res[entity_type]['partial_precision'], entity_type_res[entity_type]['partial_recall'])
   
-    return res
+    # Calculate average F1 (micro, unweighted macro, weighted macro)
+    total_exact = 0
+    total_partial = 0
+    total_gold = 0
+    total_exact_f1 = 0
+    total_partial_f1 = 0
+    total_weighted_exact_f1 = 0
+    total_weighted_partial_f1 = 0
+    total_gold_entities = sum([d['gold'] for entity_type, d in entity_type_res.items()])
+    none_na_exact_f1 = 0
+    none_na_partial_f1 = 0
+    for entity_type, d in entity_type_res.items():
+      total_exact += d['exact']
+      total_partial += d['partial_in_gold']
+      total_gold += d['gold']
+      if pd.notna(entity_type_res[entity_type]['exact_F1']):
+        none_na_exact_f1 += 1
+        total_exact_f1 += entity_type_res[entity_type]['exact_F1']
+        total_weighted_exact_f1 += entity_type_res[entity_type]['exact_F1'] * (d['gold']/total_gold_entities)
+      if pd.notna(entity_type_res[entity_type]['partial_F1']):
+        none_na_partial_f1 += 1
+        total_partial_f1 += entity_type_res[entity_type]['partial_F1']
+        total_weighted_partial_f1 += entity_type_res[entity_type]['partial_F1'] * (d['gold']/total_gold_entities)
 
-  def NER_evaluate_All(self) -> Tuple[pd.DataFrame, Dict[str, pd.DataFrame]]:
+    
+    average_res = {}
+    average_res['exact_micro_F1'] = total_exact/total_gold if total_gold != 0 else float('nan')
+    average_res['partial_micro_F1'] = total_partial/total_gold if total_gold != 0 else float('nan')
+    average_res['exact_unweighted_macro_F1'] = total_exact_f1/ none_na_exact_f1
+    average_res['partial_unweighted_macro_F1'] = total_partial_f1/ none_na_partial_f1
+    average_res['exact_weighted_macro_F1'] = total_weighted_exact_f1/ none_na_exact_f1
+    average_res['partial_weighted_macro_F1'] = total_weighted_partial_f1/ none_na_partial_f1
+
+    return entity_type_res, average_res
+
+  def NER_evaluate(self) -> Tuple[pd.DataFrame, Dict[str, pd.DataFrame]]:
     """
     This method iterate through all predicted IEs and output 
     1. Overall evaluation
@@ -662,7 +704,7 @@ class IE_Evaluator:
 
     Returns
     -------
-    a dataframe with [gold, pred, exact, partial_per_gold, partial_per_pred, exact_precision,
+    a dataframe with [gold, pred, exact, partial_in_gold, partial_in_pred, exact_precision,
                       exact_recall, exact_F1, partial_precision, partial_recall, partial_F1]
       each row is an entity type
     a Dict of {doc_id, dataframe} for each document
@@ -671,23 +713,46 @@ class IE_Evaluator:
     for _, ie in self.pred_IEs_dict.items():
       pred_entities = ie['entity']
       gold_entities = self.gold_IEs_dict[ie['doc_id']]['entity']
-      res = self.NER_evaluate(pred_entities=pred_entities, gold_entities=gold_entities)
-
-      table = pd.DataFrame(res).transpose().reset_index().rename(columns={'index':'entity_type'})
+      entity_type_res, average_res = self._NER_evaluate(pred_entities=pred_entities, gold_entities=gold_entities)
+      table = pd.DataFrame(entity_type_res).transpose().reset_index().rename(columns={'index':'entity_type'})
+      avg = pd.DataFrame({'entity_type':['<Micro f1 score>', '<Macro (unweighted) f1 score>', '<Macro (weighted) f1 score>'],
+                          'exact_F1': [average_res['exact_micro_F1'], average_res['exact_unweighted_macro_F1'], average_res['exact_weighted_macro_F1']],
+                          'partial_F1': [average_res['partial_micro_F1'], average_res['partial_unweighted_macro_F1'], average_res['partial_weighted_macro_F1']]
+                        })
+      table = pd.concat([table, avg], axis=0)
       doc_res[ie['doc_id']] = table
       
     total = pd.concat([table for _, table in doc_res.items()])
     total_res = total.groupby('entity_type').agg({'gold':'sum', 'pred':'sum', 'exact':'sum',
-                                              'partial_per_gold':'sum', 'partial_per_pred':'sum'})
+                                              'partial_in_gold':'sum', 'partial_in_pred':'sum'})
     
     total_res.reset_index(inplace=True)
+    total_res = total_res[~total_res['entity_type'].isin(['<Macro (unweighted) f1 score>', 
+                                                          '<Macro (weighted) f1 score>',
+                                                          '<Micro f1 score>'])]
     total_res['exact_precision'] = total_res['exact']/total_res['pred']
-    total_res['partial_precision'] = total_res['partial_per_pred']/total_res['pred']
+    total_res['partial_precision'] = total_res['partial_in_pred']/total_res['pred']
     total_res['exact_recall'] = total_res['exact']/total_res['gold']
-    total_res['partial_recall'] = total_res['partial_per_gold']/total_res['gold']
+    total_res['partial_recall'] = total_res['partial_in_gold']/total_res['gold']
     total_res['exact_F1'] = total_res.apply(lambda x:self.F1(x.exact_precision, x.exact_recall), axis=1)
     total_res['partial_F1'] = total_res.apply(lambda x:self.F1(x.partial_precision, x.partial_recall), axis=1)
+    # Micro F1
+    exact_micro_f1 = total_res['exact'].sum()/ total_res['gold'].sum()
+    partial_micro_f1 = total_res['partial_in_gold'].sum()/ total_res['gold'].sum()
+    # unweighted Macro
+    exact_unweighted_macro_f1 = total_res['exact_F1'].mean()
+    partial_unweighted_macro_f1 = total_res['partial_F1'].mean()
+    # weighted Macro
+    total_gold_entities = total_res['gold'].sum()
+    exact_weighted_macro_f1 = (total_res['exact_F1'] * total_res['gold']/ total_gold_entities).sum()
+    partial_weighted_macro_f1 = (total_res['partial_F1'] * total_res['gold']/ total_gold_entities).sum()
     
+    avg = pd.DataFrame({'entity_type':['<Micro f1 score>', '<Macro (unweighted) f1 score>', '<Macro (weighted) f1 score>'], 
+                       'exact_F1': [exact_micro_f1, exact_unweighted_macro_f1, exact_weighted_macro_f1], 
+                       'partial_F1': [partial_micro_f1, partial_unweighted_macro_f1, partial_weighted_macro_f1]})
+
+    total_res = pd.concat([total_res, avg], axis=0)
+
     return total_res, doc_res
   
 
