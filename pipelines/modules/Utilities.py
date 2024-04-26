@@ -689,10 +689,10 @@ class IE_Evaluator:
     average_res = {}
     average_res['exact_micro_F1'] = total_exact/total_gold if total_gold != 0 else float('nan')
     average_res['partial_micro_F1'] = total_partial/total_gold if total_gold != 0 else float('nan')
-    average_res['exact_unweighted_macro_F1'] = total_exact_f1/ none_na_exact_f1
-    average_res['partial_unweighted_macro_F1'] = total_partial_f1/ none_na_partial_f1
-    average_res['exact_weighted_macro_F1'] = total_weighted_exact_f1/ none_na_exact_f1
-    average_res['partial_weighted_macro_F1'] = total_weighted_partial_f1/ none_na_partial_f1
+    average_res['exact_unweighted_macro_F1'] = total_exact_f1/ none_na_exact_f1 if none_na_exact_f1 != 0 else float('nan')
+    average_res['partial_unweighted_macro_F1'] = total_partial_f1/ none_na_partial_f1 if none_na_partial_f1 != 0 else float('nan')
+    average_res['exact_weighted_macro_F1'] = total_weighted_exact_f1/ none_na_exact_f1 if none_na_exact_f1 != 0 else float('nan')
+    average_res['partial_weighted_macro_F1'] = total_weighted_partial_f1/ none_na_partial_f1 if none_na_partial_f1 != 0 else float('nan')
 
     return entity_type_res, average_res
 
