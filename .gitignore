@@ -1,0 +1,15 @@
+# data
+/data/
+/IE/
+/doc_id/
+
+# output
+*.csv
+*.json
+/checkpoints/
+/logs/
+
+# compiled files
+*.pyc
+
+

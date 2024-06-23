@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-PATH = r'E:\David projects\NLP_IE_Pipelines'
+PATH = r'/home/daviden1013/David_projects/NLP_IE_Pipelines_demo/'
 
 import os
 

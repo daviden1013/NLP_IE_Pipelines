@@ -84,6 +84,8 @@ def main():
                         valid_dataset=valid_dataset,
                         save_model_mode='best',
                         save_model_path=os.path.join(config['out_path'], 'checkpoints'),
+                        early_stop=config['early_stop'],
+                        early_stop_epochs=config['early_stop_epochs'],
                         log_path=os.path.join(config['out_path'], 'logs'),
                         device=config['device'])
   

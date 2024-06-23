@@ -4,14 +4,14 @@
   # IE loading parameters
   ##############################
   # directory for IE files
-  IE_dir: E:\David projects\NLP_IE_Pipelines\IE
+  IE_dir: /home/daviden1013/David_projects/NLP_IE_Pipelines/IE
   ##############################
   # Model fine-tune parameters
   ##############################
   # mode, either IO or BIO
   BIO_mode: BIO
   # development set file path
-  deve_id_file: E:\David projects\NLP_IE_Pipelines\doc_id\train_id
+  deve_id_file: /home/daviden1013/David_projects/NLP_IE_Pipelines/doc_id/train_id
   # ratio of validation set. Will be sampled from development set
   valid_ratio: 0.2
   # Define entity labels and category numbers
@@ -36,26 +36,30 @@
     B-ADE: 17
     I-ADE: 18
   # tokenizer path
-  tokenizer: E:\David projects\NLP_IE_Pipelines\base models\PubMedBERT
+  tokenizer: microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract
   # number of wordpiece tokens. Padding/ truncation will be applied
   token_length: 256
   # base NLP model file path
-  base_model: E:\David projects\NLP_IE_Pipelines\base models\PubMedBERT
+  base_model: microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract
   # learning rate
   lr: 2.e-6
   # n_ephoch
-  n_epochs: 30
+  n_epochs: 100
   # batch_size
   batch_size: 32
+  # early stop
+  early_stop: True
+  # number of non-improving epoches to trigger early stop
+  early_stop_epochs: 8
   # Output path
-  out_path: E:\David projects\NLP_IE_Pipelines
+  out_path: /home/daviden1013/David_projects/NLP_IE_Pipelines
   # CUDA device name
   device: cuda:0
   ##############################
   # Model evaluate parameters
   ##############################
   # test set file path
-  test_id_file: E:\David projects\NLP_IE_Pipelines\doc_id\test_id
+  test_id_file: /home/daviden1013/David_projects/NLP_IE_Pipelines/doc_id/test_id
   # batch size for evaluation
   eval_batch_size: 128
   # checkpoint to evaluate, "best" use the best with lowest validation loss
